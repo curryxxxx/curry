@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CURRY Trading Bot Overview</title>
+<style>
+  @page { size: A4; margin: 15mm 16mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; color: #172033; font: 10pt/1.45 "Segoe UI", Arial, sans-serif; }
+  h1 { margin: 0; color: #102448; font-size: 30pt; letter-spacing: -0.5pt; }
+  h2 { margin: 19px 0 8px; color: #123766; font-size: 15pt; }
+  h3 { margin: 0 0 4px; color: #173d69; font-size: 10pt; }
+  p { margin: 5px 0 8px; }
+  .cover { padding: 18mm 2mm 7mm; }
+  .eyebrow { color: #2876bb; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+  .subtitle { margin-top: 6px; color: #53647b; font-size: 14pt; }
+  .badge { display: inline-block; margin-top: 15px; padding: 5px 10px; border-radius: 12px; background: #e8f4ec; color: #21643b; font-weight: 700; }
+  .note { margin: 14px 0; padding: 10px 12px; border-left: 4px solid #e6a438; background: #fff7e8; }
+  .diagram { margin: 10px 0 14px; padding: 12px; border: 1px solid #d5deeb; border-radius: 8px; background: #f7f9fc; }
+  .row { display: flex; align-items: stretch; gap: 7px; margin: 7px 0; }
+  .box { flex: 1; padding: 8px; border: 1px solid #c5d3e6; border-radius: 6px; background: white; text-align: center; }
+  .box strong { display: block; color: #123766; }
+  .arrow { align-self: center; color: #2876bb; font-size: 18pt; font-weight: 700; }
+  .small { color: #596980; font-size: 8.5pt; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .card { padding: 9px 10px; border: 1px solid #dbe2ed; border-radius: 6px; background: #fff; }
+  .card p { margin: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+  th, td { padding: 6px 7px; border-bottom: 1px solid #dce3ed; text-align: left; vertical-align: top; }
+  th { background: #eef3f9; color: #173d69; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  ul { margin: 5px 0 8px; padding-left: 18px; }
+  li { margin: 3px 0; }
+  .footer { margin-top: 12px; padding-top: 7px; border-top: 1px solid #dce3ed; color: #69788c; font-size: 8pt; }
+  .page-break { break-before: page; }
+  .tag { color: #2876bb; font-weight: 700; }
+</style>
+</head>
+<body>
+  <section class="cover">
+    <div class="eyebrow">System overview</div>
+    <h1>CURRY</h1>
+    <div class="subtitle">MetaTrader 5 Forex automation bot</div>
+    <span class="badge">Paper trading is the default</span>
+    <p style="margin-top:19px; max-width:650px; color:#46566c; font-size:12pt">
+      A configurable trading workflow that reads closed market bars, evaluates one selected
+      strategy, applies entry and account-risk checks, then simulates or submits an order.
+    </p>
+    <div class="note"><strong>Important:</strong> The included strategy rules are examples, not claims of profitability.
+      Trading involves substantial risk. Backtest and validate with realistic spread, slippage,
+      commissions, broker constraints, and out-of-sample data.</div>
+  </section>
+
+  <h2>Architecture at a glance</h2>
+  <div class="diagram">
+    <div class="row">
+      <div class="box"><strong>MetaTrader 5</strong><span class="small">quotes, account, OHLC bars</span></div>
+      <div class="arrow">›</div>
+      <div class="box"><strong>Market data</strong><span class="small">connect, fetch closed bars</span></div>
+      <div class="arrow">›</div>
+      <div class="box"><strong>Indicators</strong><span class="small">EMA, RSI, MACD, ATR</span></div>
+    </div>
+    <div class="row">
+      <div class="box"><strong>Session + news gates</strong><span class="small">per-strategy sessions and event blackout</span></div>
+      <div class="arrow">›</div>
+      <div class="box"><strong>Selected strategy</strong><span class="small">one configured rule evaluates the bars</span></div>
+      <div class="arrow">›</div>
+      <div class="box"><strong>Signal</strong><span class="small">side, entry reference, SL, TP, time</span></div>
+    </div>
+    <div class="row">
+      <div class="box"><strong>Risk manager</strong><span class="small">spread, daily loss, open trades, sizing</span></div>
+      <div class="arrow">›</div>
+      <div class="box"><strong>Trade executor</strong><span class="small">paper simulation or confirmed live MT5 order</span></div>
+      <div class="arrow">›</div>
+      <div class="box"><strong>Logs + status</strong><span class="small">console, application log, trade history</span></div>
+    </div>
+  </div>
+  <p class="small">Main orchestration is in <strong>main.py</strong>; supporting modules provide configuration, indicators,
+    market data, strategy evaluation, risk checks, execution, filters, logging, and backtesting.</p>
+
+  <h2>Runtime sequence</h2>
+  <ol>
+    <li>Load and validate settings; connect to the MT5 terminal.</li>
+    <li>Refresh the economic calendar and determine active trading sessions.</li>
+    <li>Update paper positions, account status, and daily P&amp;L.</li>
+    <li>For each configured symbol, check session/news rules and fetch closed OHLC bars.</li>
+    <li>Calculate indicators; evaluate the configured strategy and produce a signal if its conditions match.</li>
+    <li>Reject duplicate-bar signals and apply risk checks; calculate volume from account risk and MT5 contract data.</li>
+    <li>Open a paper position by default, or submit a live market order with broker-side stop-loss and take-profit.</li>
+  </ol>
+
+  <div class="page-break"></div>
+  <h2>Strategy catalog</h2>
+  <p>Only the strategy selected by <strong>CURRY_STRATEGY</strong> is evaluated for entries. Strategies are not combined or voted together.</p>
+  <table>
+    <thead><tr><th>Strategy</th><th>Signal concept</th></tr></thead>
+    <tbody>
+      <tr><td>ma_crossover</td><td>EMA 50 / EMA 200 crossover.</td></tr>
+      <tr><td>support_resistance</td><td>Rejection near the previous 20-bar range boundary.</td></tr>
+      <tr><td>breakout_retest</td><td>Recent 20-bar range breakout followed by a retest.</td></tr>
+      <tr><td>rsi</td><td>RSI(14) exits oversold/overbought with candle-direction confirmation.</td></tr>
+      <tr><td>fibonacci</td><td>Rejection around 38.2%, 50%, or 61.8% of a recent swing.</td></tr>
+      <tr><td>liquidity_sweep</td><td>Wick through clustered highs/lows followed by rejection.</td></tr>
+      <tr><td>fair_value_gap</td><td>Three-candle imbalance revisit with directional confirmation.</td></tr>
+      <tr><td>london_breakout</td><td>Break of the same-day 00:00–07:00 UTC range during 07:00–11:00 UTC.</td></tr>
+      <tr><td>macd</td><td>MACD(12/26/9) crossover aligned with EMA 50 / 200 trend.</td></tr>
+      <tr><td>supply_demand</td><td>Retest and rejection of a base preceding an impulsive move.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Signal and risk model</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Signal construction</h3>
+      <p>Reference price is the latest closed-bar close. The default ATR stop multiplier is 1.5 and target reward/risk is 2.0.</p>
+      <p class="small"><span class="tag">BUY</span> SL = price − ATR × multiplier; TP = price + stop distance × reward/risk.<br>
+      <span class="tag">SELL</span> SL = price + ATR × multiplier; TP = price − stop distance × reward/risk.</p>
+    </div>
+    <div class="card">
+      <h3>Entry protections</h3>
+      <p>Weekend closure, maximum spread, open-position cap, daily loss cap, session allow-list, and high-impact news blackout.</p>
+      <p class="small">Default risk per trade is 0.5% of account equity (configurable from 0.5% to 1%). Lot sizing uses MT5's profit calculator and broker volume limits.</p>
+    </div>
+  </div>
+
+  <h2>Operating modes and safety</h2>
+  <div class="cols">
+    <div>
+      <h3>Paper mode (default)</h3>
+      <ul>
+        <li>Simulates positions; does not place MT5 orders.</li>
+        <li>Still uses the connected MT5 terminal for quotes, account info, and sizing.</li>
+        <li>Paper exits and trade history are tracked locally.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Live mode (explicit opt-in)</h3>
+      <ul>
+        <li>Requires <strong>CURRY_TRADING_MODE=live</strong> and <strong>CURRY_LIVE_TRADING_CONFIRM=I_ACCEPT_LIVE_RISK</strong>.</li>
+        <li>Live orders include broker-side SL/TP; failures are reported as errors.</li>
+        <li>Verify account, symbols, and broker constraints; test paper mode first.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Backtesting and limits</h2>
+  <p>The sequential OHLC backtester enters on the next bar and uses conservative stop-first handling when both exit levels are reached within a bar. Spread is an explicit input; commissions and all execution effects may not be fully modeled. Historical results do not guarantee future performance.</p>
+  <p class="small"><strong>Typical start:</strong> Install Python 3.12+, install requirements, open and sign in to MetaTrader 5, then run <code>python main.py</code>. Use environment settings to choose a strategy, timeframe, and symbols. Never store broker credentials in source code.</p>
+
+  <div class="footer">CURRY bot overview · Generated from the workspace documentation and implementation · 14 November 2026</div>
+</body>
+</html>
