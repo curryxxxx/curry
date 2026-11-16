@@ -1,0 +1,11 @@
+strategies:
+  ma_crossover: [london, new_york]
+  support_resistance: [asian, london, new_york]
+  breakout_retest: [london, new_york]
+  rsi: [asian, london, new_york]
+  fibonacci: [london, new_york]
+  liquidity_sweep: [london, new_york]
+  fair_value_gap: [london, new_york]
+  london_breakout: [london]
+  macd: [london, new_york]
+  supply_demand: [london, new_york]
